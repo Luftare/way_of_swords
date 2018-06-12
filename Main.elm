@@ -51,11 +51,11 @@ update msg model =
         currentDamage = playerDamage level
         targetWillDie = List.any (\t -> t.id == id && currentDamage >= t.hp) model.targets
         updatedExp = if targetWillDie then model.exp + 8 else model.exp
-        updateTarget t = if t.id == id then { t | hp = t.hp - currentDamage } else t
+        damageTarget t = if t.id == id then { t | hp = t.hp - currentDamage } else t
       in
         ({ model
           | targets =
-            List.map updateTarget model.targets
+            List.map damageTarget model.targets
             |> List.filter targetAlive
           , exp = updatedExp
         }, Cmd.none)
@@ -78,7 +78,8 @@ viewStats model =
     level = expToLevel model.exp
   in
     div []
-      [ div [] [ text ("Level: " ++ toString level) ]
+      [ div [] [ text ("Experience: " ++ toString model.exp) ]
+      , div [] [ text ("Level: " ++ toString level) ]
       , div [] [ text ("Damage: " ++ toString (playerDamage level)) ]
       ]
 

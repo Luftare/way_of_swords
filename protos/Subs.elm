@@ -8,11 +8,11 @@ import Keyboard
 -- MODEL
 
 type alias Model =
-    Int
+    String
 
 init : ( Model, Cmd Msg )
 init =
-    ( 0, Cmd.none )
+    ( "", Cmd.none )
 
 -- MESSAGES
 
@@ -25,21 +25,24 @@ type Msg
 view : Model -> Html Msg
 view model =
     div []
-        [ text (toString model) ]
-
-
+        [ text model ]
 
 -- UPDATE
 
+mouseString position =
+  "x: " ++ (toString position.x) ++ " y: " ++ (toString position.y)
+
+keyString code =
+  "Key code: " ++ (toString code)
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         MouseMsg position ->
-            ( position.x, Cmd.none )
+            ( mouseString position, Cmd.none )
 
         KeyMsg code ->
-            ( code, Cmd.none )
+            ( keyString code, Cmd.none )
 
 
 
@@ -49,7 +52,7 @@ update msg model =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
-        [ Mouse.clicks MouseMsg
+        [ Mouse.moves MouseMsg
         , Keyboard.downs KeyMsg
         ]
 
