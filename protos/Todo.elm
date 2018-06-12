@@ -36,7 +36,7 @@ update msg model =
             { model | todo = text }
 
         AddItem ->
-            { model | todos = Todo { todo = model.newTodoName, id = 1 } :: model.todos }
+            { model | todos = model.todo :: model.todos }
 
         RemoveItem text ->
             { model | todos = List.filter (\t -> t /= text) model.todos }
@@ -49,6 +49,7 @@ todoItem todo =
         [ text todo
         , button [ onClick (RemoveItem todo) ] [ text "X" ]
         ]
+
 
 todoList : List String -> Html Msg
 todoList todos =
@@ -63,5 +64,6 @@ view model =
     div []
         [ input [ type_ "text", onInput UpdateText, value model.todo ] []
         , button [ onClick AddItem ] [ text "Add Todo" ]
+        , div [] [ text model.todo ]
         , todoList model.todos
         ]

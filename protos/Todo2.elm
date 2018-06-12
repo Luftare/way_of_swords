@@ -10,21 +10,29 @@ main =
     { model = model, update = update, view = view }
 
 type alias Todo =
-  { identifier: Int
+  { id: Int
   , name : String
+  , done : Bool
   }
 
 type alias Model =
   { newTodoName : String
   , todos : List Todo
-  , idCounter : Int
+  , uid : Int
   }
 
 model : Model
 model =
   { newTodoName = "Jou!"
   , todos = []
-  , idCounter = 1
+  , uid = 1
+  }
+
+newTodo : String -> Int -> Todo
+newTodo name id =
+  { name = name
+  , id = id
+  , done = False
   }
 
 type Msg
@@ -38,13 +46,20 @@ update msg model =
     UpdateNewTodoName text ->
       { model | newTodoName = text }
     Add ->
-      { model | todos = (Todo { identifier = 4, name = "jaa" }) :: model.todos }
-    Remove todoId ->
-      model
+      { model
+      | uid = model.uid + 1
+      , newTodoName = ""
+      , todos = model.todos ++ [ newTodo model.newTodoName model.uid ]
+      }
+    Remove id ->
+      { model | todos = List.filter (\a -> a.id /= id) model.todos }
 
 todoItem : Todo -> Html Msg
 todoItem todo =
-  li [] [text todo.name]
+  li []
+    [ text todo.name
+    , button [onClick (Remove todo.id)] [text "X"]
+    ]
 
 todoList : List Todo -> Html Msg
 todoList todos =
@@ -56,8 +71,7 @@ todoList todos =
 view : Model -> Html Msg
 view model =
   div []
-    [ div [] [text model.newTodoName]
-    , input [type_ "text", value model.newTodoName, onInput UpdateNewTodoName] []
+    [ input [type_ "text", value model.newTodoName, onInput UpdateNewTodoName] []
     , button [onClick Add] [text "Add"]
     , todoList model.todos
     ]
