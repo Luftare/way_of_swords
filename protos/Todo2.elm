@@ -10,7 +10,7 @@ main =
     { model = model, update = update, view = view }
 
 type alias Todo =
-  { id: Int
+  { id : Int
   , name : String
   , done : Bool
   }
