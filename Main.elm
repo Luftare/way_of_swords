@@ -7,8 +7,12 @@ import List exposing (..)
 
 main : Program Never Model Msg
 main =
-  beginnerProgram
-    { model = model, update = update, view = view }
+    program
+        { init = init
+        , view = view
+        , update = update
+        , subscriptions = (always Sub.none)
+        }
 
 type alias Target =
   { id : Int
@@ -17,47 +21,44 @@ type alias Target =
 
 type alias Model =
   { exp : Int
-  , level : Int
   , targetUid : Int
   , targets : List Target
   }
 
-initialTargetsCount = 4
-
-model : Model
-model =
-  { exp = 0
-  , level = 1
+init : (Model, Cmd Msg)
+init =
+  ({ exp = 0
   , targetUid = 2
   , targets = [(Target 0 100), (Target 1 100), (Target 2 100), (Target 3 100)]
-  }
+  }, Cmd.none)
 
 type Msg
   = HitTarget Int
-  | LevelUp
 
 playerDamage : Int -> Int
-playerDamage level = round (10 * 1.2 ^ toFloat level)
+playerDamage exp = round (10 * 1.2 ^ toFloat (expToLevel exp))
 
-update : Msg -> Model -> Model
+expToLevel : Int -> Int
+expToLevel exp = round (toFloat exp / 10 ) + 1
+
+update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
     HitTarget id ->
       let
         targetAlive t = t.hp > 0
-        currentDamage = playerDamage model.level
+        level = expToLevel model.exp
+        currentDamage = playerDamage level
         targetWillDie = List.any (\t -> t.id == id && currentDamage >= t.hp) model.targets
-        newLevel = if targetWillDie then model.level + 1 else model.level
+        updatedExp = if targetWillDie then model.exp + 8 else model.exp
         updateTarget t = if t.id == id then { t | hp = t.hp - currentDamage } else t
       in
-        { model
+        ({ model
           | targets =
             List.map updateTarget model.targets
             |> List.filter targetAlive
-          , level = newLevel
-        }
-    LevelUp ->
-      model
+          , exp = updatedExp
+        }, Cmd.none)
 
 viewTarget : Target -> Html Msg
 viewTarget target =
@@ -73,10 +74,13 @@ viewTargets targets =
 
 viewStats : Model -> Html Msg
 viewStats model =
-  div []
-    [ div [] [ text ("Level: " ++ toString model.level) ]
-    , div [] [ text ("Damage: " ++ toString (playerDamage model.level)) ]
-    ]
+  let
+    level = expToLevel model.exp
+  in
+    div []
+      [ div [] [ text ("Level: " ++ toString level) ]
+      , div [] [ text ("Damage: " ++ toString (playerDamage level)) ]
+      ]
 
 view : Model -> Html Msg
 view model =
