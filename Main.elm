@@ -24,6 +24,7 @@ type alias Target =
 
 type alias Model =
   { exp : Int
+  , level : Int
   , uid : Int
   , targets : List Target
   }
@@ -36,66 +37,77 @@ delay time msg =
 init : (Model, Cmd Msg)
 init =
   ({ exp = 0
+  , level = 1
   , uid = 3
-  , targets = [(Target 0 100), (Target 1 100), (Target 2 100)]
-  }, Cmd.none)
+  , targets = []
+  }, delay 0 <| SpawnTarget)
+
+
+playerDamage : Int -> Int
+playerDamage level = round (10 * 1.2 ^ (toFloat level))
+
+requiredExpForNextLevel : Int -> Int
+requiredExpForNextLevel level = 10
 
 type Msg
   = HitTarget Int
+  | SpawnTarget
 
-playerDamage : Int -> Int
-playerDamage exp = round (10 * 1.2 ^ toFloat (expToLevel exp))
-
-expToLevel : Int -> Int
-expToLevel exp = round (toFloat exp / 10 ) + 1
-
--- TODO: Add new target if target will die after a moment
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
     HitTarget id ->
       let
         targetAlive t = t.hp > 0
-        level = expToLevel model.exp
-        currentDamage = playerDamage level
+        currentDamage = playerDamage model.level
         targetWillDie = List.any (\t -> t.id == id && currentDamage >= t.hp) model.targets
-        updatedExp = if targetWillDie then model.exp + 8 else model.exp
+        expGain = if targetWillDie then 8 else 0
+        willLevelUp = (expGain + model.exp) >= (requiredExpForNextLevel model.level)
+        levelGain = if willLevelUp then 1 else 0
+        newLevel = model.level + levelGain
+        newExp = if willLevelUp then model.exp + expGain - (requiredExpForNextLevel model.level) else model.exp + expGain
         damageTarget t = if t.id == id then { t | hp = t.hp - currentDamage } else t
+        shouldSpawnTarget = List.length model.targets < 6
+        commandMsg = if targetWillDie && shouldSpawnTarget then [delay (second * 2) <| SpawnTarget] else []
       in
         { model
           | targets =
             List.map damageTarget model.targets
             |> List.filter targetAlive
-          , exp = updatedExp
-        } ! (if targetWillDie then [] else [])
+          , exp = newExp
+          , level = newLevel
+        } ! commandMsg
+    SpawnTarget ->
+      let
+        shouldSpawnTarget = List.length model.targets < 6
+        commandMsg = if shouldSpawnTarget then [delay (second * 1) <| SpawnTarget] else []
+      in
+        { model | targets = model.targets ++ [ Target model.uid 100 ], uid = model.uid + 1 } ! commandMsg
 
-viewTarget : Target -> Html Msg
-viewTarget target =
+renderTarget : Target -> Html Msg
+renderTarget target =
   div [onMouseDown (HitTarget target.id)] [ text ("Target with hp: " ++ toString target.hp) ]
 
-viewTargets : List Target -> Html Msg
-viewTargets targets =
+renderTargets : List Target -> Html Msg
+renderTargets targets =
   let
     children
-      = List.map viewTarget targets
+      = List.map renderTarget targets
   in
     div [] children
 
-viewStats : Model -> Html Msg
-viewStats model =
-  let
-    level = expToLevel model.exp
-  in
-    div []
-      [ div [] [ text ("Experience: " ++ toString model.exp) ]
-      , div [] [ text ("Level: " ++ toString level) ]
-      , div [] [ text ("Damage: " ++ toString (playerDamage level)) ]
-      ]
+renderStats : Model -> Html Msg
+renderStats model =
+  div []
+    [ div [] [ text ("Experience: " ++ toString model.exp) ]
+    , div [] [ text ("Level: " ++ toString model.level) ]
+    , div [] [ text ("Damage: " ++ toString (playerDamage model.level)) ]
+    ]
 
 view : Model -> Html Msg
 view model =
   div []
     [ h1 [] [text "WoS"]
-    , viewStats model
-    , viewTargets model.targets
+    , renderStats model
+    , renderTargets model.targets
   ]
