@@ -4,6 +4,9 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import List exposing (..)
+import Time exposing (Time, second)
+import Task
+import Process
 
 main : Program Never Model Msg
 main =
@@ -21,15 +24,20 @@ type alias Target =
 
 type alias Model =
   { exp : Int
-  , targetUid : Int
+  , uid : Int
   , targets : List Target
   }
+
+delay : Time.Time -> msg -> Cmd msg
+delay time msg =
+  Process.sleep time
+  |> Task.perform (\_ -> msg)
 
 init : (Model, Cmd Msg)
 init =
   ({ exp = 0
-  , targetUid = 2
-  , targets = [(Target 0 100), (Target 1 100), (Target 2 100), (Target 3 100)]
+  , uid = 3
+  , targets = [(Target 0 100), (Target 1 100), (Target 2 100)]
   }, Cmd.none)
 
 type Msg
@@ -41,6 +49,7 @@ playerDamage exp = round (10 * 1.2 ^ toFloat (expToLevel exp))
 expToLevel : Int -> Int
 expToLevel exp = round (toFloat exp / 10 ) + 1
 
+-- TODO: Add new target if target will die after a moment
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
@@ -53,12 +62,12 @@ update msg model =
         updatedExp = if targetWillDie then model.exp + 8 else model.exp
         damageTarget t = if t.id == id then { t | hp = t.hp - currentDamage } else t
       in
-        ({ model
+        { model
           | targets =
             List.map damageTarget model.targets
             |> List.filter targetAlive
           , exp = updatedExp
-        }, Cmd.none)
+        } ! (if targetWillDie then [] else [])
 
 viewTarget : Target -> Html Msg
 viewTarget target =
